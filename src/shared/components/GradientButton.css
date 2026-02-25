@@ -1,0 +1,9 @@
+.gradient-button-hover {
+  transition: box-shadow 0.3s ease-in-out !important;
+}
+
+.gradient-button-hover:hover,
+.gradient-button-hover.ant-btn:hover {
+  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.5) !important;
+}
+
