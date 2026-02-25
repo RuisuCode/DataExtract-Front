@@ -1,0 +1,7 @@
+# ignore node modules and build outputs
+node_modules
+dist
+.vscode
+.DS_Store
+npm-debug.log
+```
