@@ -29,4 +29,4 @@ ENV PORT=3000
 EXPOSE 3000
 
 # start the server using serve, allowing custom port via PORT
-CMD ["serve", "-s", "dist", "-l", "${PORT}"]
+CMD ["serve", "-s", "dist", "-l", "3000"]
