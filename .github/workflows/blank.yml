@@ -63,6 +63,7 @@ jobs:
           services:
             ${APP_ID}:
               container_name: ${APP_ID}
+              image: ${{ env.APP_ID }}:latest
               build:
                 context: .
                 dockerfile: Dockerfile
