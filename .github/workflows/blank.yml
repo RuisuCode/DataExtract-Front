@@ -41,6 +41,12 @@ jobs:
             git clone https://github.com/${{ github.repository }}.git .
           fi
 
+          DETECTED_PORT=$(grep -iE '^EXPOSE|^ENV PORT' Dockerfile | grep -oE '[0-9]+' | head -n 1)
+          
+          # Si no detecta nada, usamos 3000 por defecto
+          APP_PORT=${DETECTED_PORT:-3000}
+          echo "Puerto detectado para la app: $APP_PORT"
+
           # 3. Validar si el contenedor ya existe en Docker (opcional pero informativo)
           if [ $(docker ps -a -q -f name=${{ env.APP_ID }}) ]; then
             echo "El contenedor ${{ env.APP_ID }} ya está presente. Docker lo actualizará si es necesario."
@@ -50,7 +56,7 @@ jobs:
           # mkdir -p ~/servidor-web-docker/${{ env.APP_ID }}
           # cd ~/servidor-web-docker/${{ env.APP_ID }}
           
-          # 2. Bajar los últimos cambios de GitHub
+          # -. Bajar los últimos cambios de GitHub
           # git pull origin main
           # if [ -d ".git" ]; then git pull origin main; else git clone https://github.com/${{ github.repository }}.git .; fi
 
@@ -58,7 +64,7 @@ jobs:
           export APP_ID=${{ env.APP_ID }}
           export APP_NAME=${{ env.APP_NAME }}
 
-          # 3. Crear el docker-compose.yml DINÁMICO para este proyecto
+          # 4. Crear el docker-compose.yml DINÁMICO para este proyecto
           cat <<EOF > docker-compose.generated.yml
           services:
             ${APP_ID}:
@@ -67,6 +73,8 @@ jobs:
               build:
                 context: .
                 dockerfile: Dockerfile
+              environment:
+                - PORT=$APP_PORT
               networks:
                 - red_proyectos
               restart: unless-stopped
@@ -74,12 +82,28 @@ jobs:
             red_proyectos:
               external: true
           EOF
-          # 3. Re-construir y levantar los contenedores
+          # -. Re-construir y levantar los contenedores
           # Esto solo actualizará lo que haya cambiado
           # docker compose up -d --build
 
-          # 4. Levantar este proyecto específico
+          # 4.2 Levantar este proyecto específico
           docker compose -f docker-compose.generated.yml up -d --build
+
+          # 4.5 Actualizar Caddyfile con el puerto dinámico
+          echo "Configurando enrutamiento en Caddy hacia el puerto $APP_PORT..."
+          
+          if ! grep -q "@${{ env.APP_ID }}" "$CADDYFILE_PATH"; then
+            # Notar que ahora usamos $APP_PORT en el reverse_proxy
+            NEW_ROUTE="\n    @${{ env.APP_ID }} {\n        header X-Project-Id \"${{ env.APP_ID }}\"\n    }\n    handle @${{ env.APP_ID }} {\n        reverse_proxy ${{ env.APP_ID }}:$APP_PORT\n    }"
+            
+            sed -i "/:80 {/a $NEW_ROUTE" "$CADDYFILE_PATH"
+            docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+          else
+            # Si ya existe, pero el puerto cambió, podríamos usar sed para actualizarlo (opcional)
+            echo "La ruta ya existe. Actualizando puerto en Caddy por si cambió..."
+            sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy .*:/reverse_proxy ${{ env.APP_ID }}:$APP_PORT/" "$CADDYFILE_PATH"
+            docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+          fi
           
           # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
           echo "Enviando notificación a AWS Lambda..."
