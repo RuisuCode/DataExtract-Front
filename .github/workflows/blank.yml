@@ -82,7 +82,8 @@ jobs:
           docker compose -f docker-compose.generated.yml up -d --build
           
           # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
-          curl -X POST ${{ secrets.LAMBDA_URL }} \
+          echo "Enviando notificación a AWS Lambda..."
+          Response=$(curl -X POST ${{ secrets.LAMBDA_URL }} \
           -H "Content-Type: application/json" \
           -d '{
             "project_id": "${{ env.APP_ID }}",
@@ -90,4 +91,8 @@ jobs:
             "project_name": "${APP_NAME}"
             "instance_ip": "${{ secrets.REMOTE_HOST }}"
             "instance_dns": "${{secrets.INSTANCE_DNS}}"
-          }'
+          }')
+          echo "------------------------------------------------------"
+          echo "Respuesta de la lambda"
+          echo "$Response"
+          echo "------------------------------------------------------"
