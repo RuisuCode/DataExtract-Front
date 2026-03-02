@@ -118,7 +118,7 @@ jobs:
             
           # Formatear para que Caddy no se queje de los espacios
           docker exec servidor-web-docker-caddy-1 caddy fmt --overwrite /etc/caddy/Caddyfile
-          docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+          docker compose restart caddy
           
           # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
           echo "Enviando notificación a AWS Lambda..."
