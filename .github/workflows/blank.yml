@@ -26,12 +26,33 @@ jobs:
         envs: APP_ID
         script: |
           # 1. Crear carpeta del proyecto si no existe
-          mkdir -p ~/servidor-web-docker/${{ env.APP_ID }}
-          cd ~/servidor-web-docker/${{ env.APP_ID }}
+          PROJECT_ROOT=~/servidor-web-docker
+          PROJECT_DIR=$PROJECT_ROOT/${{ env.APP_ID }}
+          
+          # 2. Validar si el proyecto ya existe en el sistema
+          if [ -d "$PROJECT_DIR" ]; then
+            echo "El proyecto ${{ env.APP_ID }} ya existe. Actualizando..."
+            cd $PROJECT_DIR
+            git pull origin main
+          else
+            echo "Proyecto nuevo. Creando carpeta y clonando..."
+            mkdir -p $PROJECT_DIR
+            cd $PROJECT_DIR
+            git clone https://github.com/${{ github.repository }}.git .
+          fi
+
+          # 3. Validar si el contenedor ya existe en Docker (opcional pero informativo)
+          if [ $(docker ps -a -q -f name=${{ env.APP_ID }}) ]; then
+            echo "El contenedor ${{ env.APP_ID }} ya está presente. Docker lo actualizará si es necesario."
+          fi
+
+          
+          # mkdir -p ~/servidor-web-docker/${{ env.APP_ID }}
+          # cd ~/servidor-web-docker/${{ env.APP_ID }}
           
           # 2. Bajar los últimos cambios de GitHub
           # git pull origin main
-          if [ -d ".git" ]; then git pull origin main; else git clone https://github.com/${{ github.repository }}.git .; fi
+          # if [ -d ".git" ]; then git pull origin main; else git clone https://github.com/${{ github.repository }}.git .; fi
 
           # Exportamos la variable para que docker-compose la vea
           export APP_ID=${{ env.APP_ID }}
