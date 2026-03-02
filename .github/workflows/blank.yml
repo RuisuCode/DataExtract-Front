@@ -90,21 +90,31 @@ jobs:
           # 4.2 Levantar este proyecto específico
           docker compose -f docker-compose.generated.yml up -d --build
 
-          # 4.5 Actualizar Caddyfile con el puerto dinámico
-          echo "Configurando enrutamiento en Caddy hacia el puerto $APP_PORT..."
+          # 4.5. ACTUALIZAR CADDYFILE (Estrategia limpia con archivo temporal)
+          echo "Verificando Caddyfile en $CADDYFILE_PATH"
           
           if ! grep -q "@${{ env.APP_ID }}" "$CADDYFILE_PATH"; then
-            # Notar que ahora usamos $APP_PORT en el reverse_proxy
-            NEW_ROUTE="\n    @${{ env.APP_ID }} {\n        header X-Project-Id \"${{ env.APP_ID }}\"\n    }\n    handle @${{ env.APP_ID }} {\n        reverse_proxy ${{ env.APP_ID }}:$APP_PORT\n    }"
+            echo "Añadiendo nueva ruta a Caddy..."
             
-            sed -i "/:80 {/a $NEW_ROUTE" "$CADDYFILE_PATH"
-            docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+            # Creamos un archivo temporal con la configuración limpia
+            cat <<EOF > /tmp/new_route.txt
+            @${{ env.APP_ID }} {
+            header X-Project-Id "${{ env.APP_ID }}"
+            }
+            handle @${{ env.APP_ID }} {
+            reverse_proxy ${{ env.APP_ID }}:$APP_PORT
+            }
+            EOF
+
+            # Usamos 'r' de sed para leer el archivo justo después de la línea ':80 {'
+          sed -i "/:80 {/r /tmp/new_route.txt" "$CADDYFILE_PATH"
+            rm /tmp/new_route.txt
           else
-            # Si ya existe, pero el puerto cambió, podríamos usar sed para actualizarlo (opcional)
-            echo "La ruta ya existe. Actualizando puerto en Caddy por si cambió..."
-            sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy .*:/reverse_proxy ${{ env.APP_ID }}:$APP_PORT/" "$CADDYFILE_PATH"
-            docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
-          fi
+            echo "La ruta ya existe. Actualizando puerto..."
+            # Actualizamos el puerto si ya existía el bloque
+            sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy .*:/reverse_proxy ${{ env.APP_ID }}:/" "$CADDYFILE_PATH"
+            sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy ${{ env.APP_ID }}:[0-9]*/reverse_proxy ${{ env.APP_ID }}:$APP_PORT/" "$CADDYFILE_PATH"
+            fi
           
           # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
           echo "Enviando notificación a AWS Lambda..."
