@@ -88,9 +88,9 @@ jobs:
           -d '{
             "project_id": "${{ env.APP_ID }}",
             "action": "deploy",
-            "project_name": "${APP_NAME}"
-            "instance_ip": "${{ secrets.REMOTE_HOST }}"
-            "instance_dns": "${{secrets.INSTANCE_DNS}}"
+            "project_name": "${APP_NAME}",
+            "instance_ip": "${{ secrets.REMOTE_HOST }}",
+            "instance_dns": "${{secrets.INSTANCE_DNS}}",
           }')
           echo "------------------------------------------------------"
           echo "Respuesta de la lambda"
