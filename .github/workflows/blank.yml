@@ -23,7 +23,7 @@ jobs:
         username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         instance_dns: ${{secrets.INSTANCE_DNS}}
-        envs: APP_ID
+        envs: APP_ID , APP_NAME
         script: |
           # 1. Crear carpeta del proyecto si no existe
           PROJECT_ROOT=~/servidor-web-docker
