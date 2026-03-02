@@ -90,7 +90,7 @@ jobs:
             "action": "deploy",
             "project_name": "${APP_NAME}",
             "instance_ip": "${{ secrets.REMOTE_HOST }}",
-            "instance_dns": "${{secrets.INSTANCE_DNS}}",
+            "instance_dns": "${{secrets.INSTANCE_DNS}}"
           }')
           echo "------------------------------------------------------"
           echo "Respuesta de la lambda"
