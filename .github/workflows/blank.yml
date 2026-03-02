@@ -104,7 +104,7 @@ jobs:
             handle @${{ env.APP_ID }} {
             reverse_proxy ${{ env.APP_ID }}:$APP_PORT
             }
-            EOF
+          EOF
 
             # Usamos 'r' de sed para leer el archivo justo después de la línea ':80 {'
           sed -i "/:80 {/r /tmp/new_route.txt" "$CADDYFILE_PATH"
