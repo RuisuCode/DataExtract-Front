@@ -115,6 +115,10 @@ jobs:
             sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy .*:/reverse_proxy ${{ env.APP_ID }}:/" "$CADDYFILE_PATH"
             sed -i "/handle @${{ env.APP_ID }} {/,/}/ s/reverse_proxy ${{ env.APP_ID }}:[0-9]*/reverse_proxy ${{ env.APP_ID }}:$APP_PORT/" "$CADDYFILE_PATH"
             fi
+            
+          # Formatear para que Caddy no se queje de los espacios
+          docker exec servidor-web-docker-caddy-1 caddy fmt --overwrite /etc/caddy/Caddyfile
+          docker exec servidor-web-docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile
           
           # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
           echo "Enviando notificación a AWS Lambda..."
