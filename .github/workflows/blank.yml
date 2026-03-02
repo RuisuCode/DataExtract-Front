@@ -28,6 +28,7 @@ jobs:
           # 1. Crear carpeta del proyecto si no existe
           PROJECT_ROOT=~/servidor-web-docker
           PROJECT_DIR=$PROJECT_ROOT/${{ env.APP_ID }}
+          CADDYFILE_PATH=$PROJECT_ROOT/Caddyfile
           
           # 2. Validar si el proyecto ya existe en el sistema
           if [ -d "$PROJECT_DIR" ]; then
