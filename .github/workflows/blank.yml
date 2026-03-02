@@ -15,20 +15,57 @@ jobs:
 
     - name: Desplegar en AWS vía SSH
       uses: appleboy/ssh-action@v1.0.3
+      env:
+        APP_ID: "app-${{ github.event.repository.id }}"
+        APP_NAME: "${{github.event.repository.name}}"
       with:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        instance_dns: ${{secrets.INSTANCE_DNS}}
+        envs: APP_ID
         script: |
-          # 1. Entrar a la carpeta del proyecto
-          cd ~/servidor-web-docker/DataExtract-Front
+          # 1. Crear carpeta del proyecto si no existe
+          mkdir -p ~/servidor-web-docker/${{ env.APP_ID }}
+          cd ~/servidor-web-docker/${{ env.APP_ID }}
           
           # 2. Bajar los últimos cambios de GitHub
-          git pull origin main
-          
+          # git pull origin main
+          if [ -d ".git" ]; then git pull origin main; else git clone https://github.com/${{ github.repository }}.git .; fi
+
+          # Exportamos la variable para que docker-compose la vea
+          export APP_ID=${{ env.APP_ID }}
+          export APP_NAME=${{ env.APP_NAME }}
+
+          # 3. Crear el docker-compose.yml DINÁMICO para este proyecto
+          cat <<EOF > docker-compose.generated.yml
+          services:
+            ${APP_ID}:
+              container_name: ${APP_ID}
+              build:
+                context: .
+                dockerfile: Dockerfile
+              networks:
+                - red_proyectos
+              restart: unless-stopped
+          networks:
+            red_proyectos:
+              external: true
+          EOF
           # 3. Re-construir y levantar los contenedores
           # Esto solo actualizará lo que haya cambiado
-          docker compose up -d --build
+          # docker compose up -d --build
+
+          # 4. Levantar este proyecto específico
+          docker compose -f docker-compose.generated.yml up -d --build
           
-          # 4. Limpieza: Borra imágenes viejas que ya no se usan (ahorra espacio)
-          docker image prune -f
+          # 5. Notificar a la Lambda (AQUÍ ES DONDE SUCEDE LA MAGIA)
+          curl -X POST ${{ secrets.LAMBDA_URL }} \
+          -H "Content-Type: application/json" \
+          -d '{
+            "project_id": "${{ env.APP_ID }}",
+            "action": "deploy",
+            "project_name": "${APP_NAME}"
+            "instance_ip": "${{ secrets.REMOTE_HOST }}"
+            "instance_dns": "${{secrets.INSTANCE_DNS}}"
+          }'
